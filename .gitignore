@@ -1,0 +1,13 @@
+# Local configuration and credentials
+.env
+.env.*
+!backend/.env.example
+
+# Build output and dependencies
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+
+# Logs
+*.log
