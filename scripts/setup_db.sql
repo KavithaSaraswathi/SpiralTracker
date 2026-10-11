@@ -1,2 +1,4 @@
-CREATE DATABASE IF NOT EXISTS spiraltrack_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-SHOW DATABASES LIKE 'spiraltrack_db';
+-- Run with psql while connected to the default "postgres" database.
+SELECT 'CREATE DATABASE spiraltrack_db'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'spiraltrack_db')
+\gexec

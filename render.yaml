@@ -6,11 +6,31 @@ services:
     dockerContext: ./backend
     healthCheckPath: /actuator/health
     envVars:
-      - key: DB_URL
-        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: spiraltrack-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: spiraltrack-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: spiraltrack-db
+          property: database
       - key: DB_USERNAME
-        sync: false
+        fromDatabase:
+          name: spiraltrack-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: spiraltrack-db
+          property: password
+      - key: DB_SSLMODE
+        value: require
       - key: SEED_DATA
         value: "false"
+
+databases:
+  - name: spiraltrack-db
+    databaseName: spiraltrack_db

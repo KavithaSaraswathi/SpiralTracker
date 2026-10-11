@@ -1,6 +1,6 @@
 # 📚 SpiralTrack
 
-> Mobile-first full-stack personal spiral-binding order and payment tracker for classmates' study materials. Built with React (Vite), Java Spring Boot 3, Spring Data JPA, and persistent MySQL database.
+> Mobile-first full-stack personal spiral-binding order and payment tracker for classmates' study materials. Built with React (Vite), Java Spring Boot 3, Spring Data JPA, and persistent PostgreSQL.
 
 ---
 
@@ -30,14 +30,14 @@ Spring Boot 3.3.4 Layered Backend [Port 8080]
                  │
                  │ Hibernate ORM / JDBC
                  ▼
-MySQL 8.0 Database [spiraltrack_db]
+PostgreSQL Database [spiraltrack_db]
   ├── students (id, name, phone, created_at)
   ├── subjects (id, name, description, unit_price, created_at)
   ├── orders (id, student_id, subject_id, quantity, pages, unit_price, total_amount, amount_paid, order_date, delivery_status, payment_status, archived, completed_at, notes)
   └── payments (id, order_id, amount, payment_method, payment_date, notes, idempotency_key, created_at)
 ```
 
-- **Database**: MySQL 8.0 (`spiraltrack_db`). Monetary values use `DECIMAL(10,2)` in MySQL and `BigDecimal` in Java.
+- **Database**: PostgreSQL (`spiraltrack_db`). Monetary values use `NUMERIC(10,2)` in PostgreSQL and `BigDecimal` in Java.
 - **Schema update**: Hibernate's configured `ddl-auto=update` adds archive fields and the `payments` table on backend startup. A one-time startup reconciliation creates an unclassified (`Not specified`) payment transaction for each legacy order with a non-zero `amount_paid` and no payment records; existing totals are preserved and Cash/GPay are never guessed.
 - **Pricing**: Each subject has a fixed per-copy price. Order totals are calculated by the backend as `unit_price × quantity`; OS is fixed at ₹140 per copy. Set a price for existing unpriced subjects from their subject detail page before creating orders.
 - **Backend**: Java 21, Spring Boot 3.3.4, Spring Data JPA, Hibernate, Bean Validation, Maven.
@@ -50,21 +50,17 @@ MySQL 8.0 Database [spiraltrack_db]
 1. **Java 21 or 17+**
 2. **Apache Maven 3.8+**
 3. **Node.js 18+ and npm**
-4. **MySQL Server 8.0** running locally on port 3306
+4. **PostgreSQL 14+** running locally on port 5432
 
 ---
 
-## 🗄️ MySQL Database Setup
+## 🗄️ PostgreSQL Database Setup
 
-1. Open MySQL CLI or MySQL Workbench:
+1. Create the application database using `psql` as a PostgreSQL role allowed to create databases:
    ```bash
-   mysql -u root -p
+   psql -U postgres -d postgres -f scripts/setup_db.sql
    ```
-2. Create the database:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS spiraltrack_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-   *(Note: The JDBC connection string in `application.properties` also contains `createDatabaseIfNotExist=true` and Hibernate uses `ddl-auto=update`, so tables are created automatically on launch).*
+   Hibernate's configured `ddl-auto=update` creates or updates the application tables on backend startup.
 
 ---
 
@@ -74,14 +70,18 @@ Edit `backend/src/main/resources/application.properties` or provide environment 
 
 | Variable | Description | Default Value |
 |---|---|---|
-| `DB_URL` | JDBC Connection URL | `jdbc:mysql://localhost:3306/spiraltrack_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC` |
-| `DB_USERNAME` | MySQL Username | `root` |
-| `DB_PASSWORD` | MySQL password | Set this to your local MySQL password; credentials are not committed. |
+| `DB_HOST` | PostgreSQL hostname | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_NAME` | PostgreSQL database name | `spiraltrack_db` |
+| `DB_SSLMODE` | PostgreSQL TLS mode | `disable` for local development |
+| `DB_USERNAME` | PostgreSQL username | `postgres` |
+| `DB_PASSWORD` | PostgreSQL password | Set this to your local PostgreSQL password; credentials are not committed. |
+| `DB_URL` | Optional JDBC URL override | Leave unset to use the host, port, and database settings above. |
 | `SEED_DATA` | Load initial sample data | `false` |
 
 To set your password in PowerShell before running:
 ```powershell
-$env:DB_PASSWORD = "YOUR_MYSQL_PASSWORD"
+$env:DB_PASSWORD = "YOUR_POSTGRES_PASSWORD"
 ```
 
 ---
@@ -110,20 +110,18 @@ The frontend will start at: `http://localhost:5173`
 
 ---
 
-## 🚀 Deploying with Vercel, Render, and MySQL
+## 🚀 Deploying with Vercel, Render, and PostgreSQL
 
-The intended hosting split is **Vercel for the React frontend**, **Render for the Spring Boot API**, and a separate hosted **MySQL** provider. Render's managed relational database is PostgreSQL, which is not compatible with this application.
+The hosting split is **Vercel for the React frontend** and **Render for the Spring Boot API and managed PostgreSQL database**. The Render Blueprint provisions the database and supplies its private host, port, name, and credentials directly to the API.
 
-1. Provision a hosted MySQL database with a provider that accepts connections from Render. Use the same region as the Render API where possible.
-2. In Render, choose **New > Blueprint** and connect `KavithaSaraswathi/SpiralTracker` on the `main` branch. The Blueprint creates the API from `backend/Dockerfile`.
-3. Enter the database JDBC URL, username, and password for `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. Keep credentials in Render's environment-variable settings; never commit or share them. Do not use `localhost` in `DB_URL`.
+1. In Render, choose **New > Blueprint** and connect `KavithaSaraswathi/SpiralTracker` on the `main` branch. Review the API and PostgreSQL plans and any charges before creating resources.
+2. The Blueprint creates the API from `backend/Dockerfile` and a managed PostgreSQL database. Keep both in the same Render region. Database credentials are passed to the API as Blueprint references; do not copy them into source files.
+3. Keep `SEED_DATA=false` to start with an empty database. Hibernate creates or updates the tables on API startup. The Render health check uses `/actuator/health`.
 4. Wait for the Render API deployment to become healthy and copy its public HTTPS URL.
 5. In Vercel, import the same GitHub repository, set the **Root Directory** to `frontend`, and use the Vite build command `npm run build` with output directory `dist`. Add `VITE_API_BASE_URL` with the Render API's HTTPS URL (the frontend appends `/api` automatically), then deploy.
 6. Copy the production Vercel hostname and add it to the Render API's `APP_CORS_ALLOWED_ORIGINS` environment variable (hostname or full HTTPS origin). Include any custom production domain you use, comma-separated. Save the variable and allow Render to redeploy.
-7. Keep `SEED_DATA=false` to start with an empty database. Hibernate creates or updates the tables on API startup. The Render health check uses `/actuator/health`.
-8. Review the selected hosting plans and database-provider charges before creating resources.
 
-The frontend can load before the CORS setting is applied, but its API requests will not work until Render allows the Vercel production origin. The API cannot become healthy until it can connect to the hosted MySQL database.
+The frontend can load before the CORS setting is applied, but its API requests will not work until Render allows the Vercel production origin. This application currently has no records to migrate; PostgreSQL will start with an empty schema.
 
 ---
 
