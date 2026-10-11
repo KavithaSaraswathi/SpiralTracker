@@ -110,20 +110,20 @@ The frontend will start at: `http://localhost:5173`
 
 ---
 
-## 🚀 Render Deployment
+## 🚀 Deploying with Vercel, Render, and MySQL
 
-The repository includes a Render Blueprint (`render.yaml`) for the static React frontend and containerized Spring Boot API. Render can deploy these services, but this application requires **MySQL**: Render's managed relational database is PostgreSQL, which is not compatible with this app.
+The intended hosting split is **Vercel for the React frontend**, **Render for the Spring Boot API**, and a separate hosted **MySQL** provider. Render's managed relational database is PostgreSQL, which is not compatible with this application.
 
-Before creating the Blueprint:
+1. Provision a hosted MySQL database with a provider that accepts connections from Render. Use the same region as the Render API where possible.
+2. In Render, choose **New > Blueprint** and connect `KavithaSaraswathi/SpiralTracker` on the `main` branch. The Blueprint creates the API from `backend/Dockerfile`.
+3. Enter the database JDBC URL, username, and password for `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. Keep credentials in Render's environment-variable settings; never commit or share them. Do not use `localhost` in `DB_URL`.
+4. Wait for the Render API deployment to become healthy and copy its public HTTPS URL.
+5. In Vercel, import the same GitHub repository, set the **Root Directory** to `frontend`, and use the Vite build command `npm run build` with output directory `dist`. Add `VITE_API_BASE_URL` with the Render API's HTTPS URL (the frontend appends `/api` automatically), then deploy.
+6. Copy the production Vercel hostname and add it to the Render API's `APP_CORS_ALLOWED_ORIGINS` environment variable (hostname or full HTTPS origin). Include any custom production domain you use, comma-separated. Save the variable and allow Render to redeploy.
+7. Keep `SEED_DATA=false` to start with an empty database. Hibernate creates or updates the tables on API startup. The Render health check uses `/actuator/health`.
+8. Review the selected hosting plans and database-provider charges before creating resources.
 
-1. Provision a hosted MySQL database with a provider that accepts connections from Render. Use the same region as the API where possible.
-2. In Render, choose **New > Blueprint** and connect `KavithaSaraswathi/SpiralTracker` on the `main` branch.
-3. Enter the database's JDBC URL, username, and password when prompted for `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. Keep credentials in Render's environment-variable settings; never commit them.
-4. Review the selected Render service plans and any database-provider charges before creating resources.
-
-The Blueprint builds the API from `backend/Dockerfile`, builds and publishes the frontend from `frontend`, configures the frontend API URL and API CORS origin from the Render service hostnames, and checks API health at `/actuator/health`. Keep `SEED_DATA=false` to start with an empty database. Hibernate creates or updates the tables on API startup.
-
-The deployment is not usable until a hosted MySQL database is provisioned and its connection values are configured. Do not set `DB_URL` to `localhost`; from Render, that would refer to the API container, not your computer or database provider.
+The frontend can load before the CORS setting is applied, but its API requests will not work until Render allows the Vercel production origin. The API cannot become healthy until it can connect to the hosted MySQL database.
 
 ---
 
