@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/subjects")
-@CrossOrigin(originPatterns = "*")
 public class SubjectController {
 
     private final SubjectService subjectService;

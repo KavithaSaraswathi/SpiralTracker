@@ -2,7 +2,13 @@ import axios from 'axios';
 
 // Automatically detect host IP (e.g. 192.168.1.4 or localhost) when accessed from mobile phone
 const backendHost = window.location.hostname || 'localhost';
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || `http://${backendHost}:8080/api`;
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const apiOrigin = configuredApiBaseUrl
+  ? (/^https?:\/\//i.test(configuredApiBaseUrl)
+    ? configuredApiBaseUrl
+    : `https://${configuredApiBaseUrl}`)
+  : `http://${backendHost}:8080`;
+const apiBaseUrl = `${apiOrigin.replace(/\/+$/, '')}${apiOrigin.replace(/\/+$/, '').endsWith('/api') ? '' : '/api'}`;
 
 const api = axios.create({
   baseURL: apiBaseUrl,

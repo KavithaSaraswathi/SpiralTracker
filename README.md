@@ -110,6 +110,23 @@ The frontend will start at: `http://localhost:5173`
 
 ---
 
+## 🚀 Render Deployment
+
+The repository includes a Render Blueprint (`render.yaml`) for the static React frontend and containerized Spring Boot API. Render can deploy these services, but this application requires **MySQL**: Render's managed relational database is PostgreSQL, which is not compatible with this app.
+
+Before creating the Blueprint:
+
+1. Provision a hosted MySQL database with a provider that accepts connections from Render. Use the same region as the API where possible.
+2. In Render, choose **New > Blueprint** and connect `KavithaSaraswathi/SpiralTracker` on the `main` branch.
+3. Enter the database's JDBC URL, username, and password when prompted for `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. Keep credentials in Render's environment-variable settings; never commit them.
+4. Review the selected Render service plans and any database-provider charges before creating resources.
+
+The Blueprint builds the API from `backend/Dockerfile`, builds and publishes the frontend from `frontend`, configures the frontend API URL and API CORS origin from the Render service hostnames, and checks API health at `/actuator/health`. Keep `SEED_DATA=false` to start with an empty database. Hibernate creates or updates the tables on API startup.
+
+The deployment is not usable until a hosted MySQL database is provisioned and its connection values are configured. Do not set `DB_URL` to `localhost`; from Render, that would refer to the API container, not your computer or database provider.
+
+---
+
 ## 📱 Accessing from Your Mobile Phone
 
 1. Connect your phone to the same Wi-Fi network as your computer.
